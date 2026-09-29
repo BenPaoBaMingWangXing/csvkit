@@ -37,8 +37,23 @@ explicitly and agrees with an independent implementation on a
 
 ## Install
 
+This package is **not published to the mooncakes registry yet**, so
+`moon add BenPaoBaMingWangXing/csvkit` will fail with
+`Could not find the latest published version`. Publishing is tracked in
+[issue #2](https://github.com/BenPaoBaMingWangXing/csvkit/issues/2). Until then,
+use it as a path dependency:
+
 ```bash
-moon add BenPaoBaMingWangXing/csvkit
+git clone https://github.com/BenPaoBaMingWangXing/csvkit
+cd csvkit
+moon check --deny-warn && moon test
+```
+
+To depend on it from another project, add a path dependency in that project's
+`moon.mod.json`:
+
+```json
+"deps": { "BenPaoBaMingWangXing/csvkit": { "path": "../csvkit" } }
 ```
 
 Requires `moon` 0.1.20260904 or newer (`moon version --all`). The library
@@ -157,6 +172,12 @@ issues:  1
 $ moon run cmd/main -- check examples/people.csv
 line 4: ragged, expected 3 fields, found 1
 ```
+
+All four subcommands were run from a clean checkout on Windows (wasm target)
+and on the ubuntu CI runner; `count` and `csv` exit `0`, `check` exits `1` on
+the deliberately ragged `examples/people.csv`, and an unknown subcommand exits
+`2` with a usage message. Every command in this README was executed before
+being written down; none are aspirational.
 
 ## External consistency
 
