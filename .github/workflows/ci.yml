@@ -24,6 +24,11 @@ jobs:
       - name: Toolchain versions
         run: moon version --all
 
+      - name: Update the registry index
+        # A fresh runner has no registry index, so resolving `moonbitlang/x`
+        # fails with "module was not found in the registry" without this.
+        run: moon update
+
       - name: Type check
         # Deny warnings here so a new deprecated-API usage fails the build
         # rather than accumulating. The codebase is currently warning-free.
@@ -57,6 +62,9 @@ jobs:
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: Update the registry index
+        run: moon update
 
       - name: version
         run: moon run cmd/main -- version
@@ -113,6 +121,9 @@ jobs:
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: Update the registry index
+        run: moon update
 
       - name: Package the module
         run: moon package
