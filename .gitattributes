@@ -1,0 +1,38 @@
+# Keep line endings stable across platforms.
+#
+# This matters more for csvkit than for most repositories, for two reasons.
+#
+# 1. The CI job "generated corpus is current" regenerates
+#    testdata/differential.tsv and fails if `git diff` is non-empty. On Windows,
+#    `core.autocrlf` would otherwise rewrite files on checkout and break that
+#    job for a reason unrelated to the code.
+#
+# 2. The corpus is the project's evidence. If a checkout setting silently
+#    rewrote a byte of it, the differential test would be comparing against
+#    something nobody reviewed. The base64 encoding in the file prevents the
+#    worst of this, but only if the file itself arrives unmodified.
+
+* text=auto eol=lf
+
+# Source and generated text: always LF in the repository.
+*.mbt text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+
+# Fixtures and corpus data. `-text` disables all newline normalisation, so the
+# bytes in the working tree are the bytes that were committed. The corpus is
+# base64 and the example file is deliberately small; neither is worth risking a
+# rewrite for.
+testdata/*.tsv -text
+examples/*.csv -text
+
+# Git's built-in CSV diff is not useful here and can be slow on the corpus.
+*.tsv -diff
+*.csv -diff
+
+# Binary assets must never be normalised.
+*.zip binary
+*.png binary

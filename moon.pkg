@@ -1,0 +1,10 @@
+// The csvkit library package.
+//
+// The library itself declares no imports, so it can be compiled for any
+// backend and embedded without pulling in anything else. The only dependency
+// is `moonbitlang/x/fs`, and only the differential conformance test needs it
+// to read `testdata/differential.tsv`; it is therefore declared as a
+// test-only import.
+import {
+  "moonbitlang/x/fs",
+} for "test"
