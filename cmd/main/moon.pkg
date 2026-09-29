@@ -1,0 +1,12 @@
+// The csvkit command line tool.
+//
+// It imports the library package, plus `moonbitlang/x/fs` for file access and
+// `moonbitlang/x/sys` for exit codes, and `moonbitlang/core/env` for argv.
+import {
+  "BenPaoBaMingWangXing/csvkit",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
+  "moonbitlang/core/env",
+}
+
+pkgtype(kind: "executable")
