@@ -1,0 +1,89 @@
+# NOTICE
+
+`csvkit` — an RFC 4180 CSV parsing and serialisation engine for MoonBit.
+
+Copyright 2026 csvkit contributors.
+
+This product is licensed under the Apache License, Version 2.0. See `LICENSE`
+for the full text.
+
+---
+
+## Provenance of the implementation
+
+`csvkit` is an **original implementation**. No source code was copied, ported,
+translated, or mechanically derived from another CSV library.
+
+The grammar it implements is not taken from any implementation either. It is
+taken from the published specification and its erratum:
+
+- **RFC 4180**, "Common Format and MIME Type for Comma-Separated Values (CSV)"
+  Files, Y. Shafranovich, October 2005.
+  <https://www.rfc-editor.org/rfc/rfc4180>
+- **RFC 4180 errata 5664**, which corrects the `escaped` production in the
+  ABNF so that a doubled quote inside a quoted field is accepted.
+  <https://www.rfc-editor.org/errata/eid5664>
+
+A specification is not a copyrighted work of authorship that can be
+"incorporated" into a program; it is a description of behaviour. `csvkit` was
+written from that description. The parser in `parser.mbt` is a hand-written
+character scanner, the writer in `writer.mbt` is a hand-written serialiser, and
+the diagnostics in `diagnostics.mbt` are original.
+
+## Third-party material actually used
+
+### At build time
+
+| Component | Role | Licence |
+| --- | --- | --- |
+| MoonBit toolchain (`moon`, `moonc`, core library) | Compiles and provides the standard library | Apache-2.0 |
+| `moonbitlang/x@0.5.5` | `fs` for reading files, `sys` for exit codes — **used by the CLI and by one test only** | Apache-2.0 |
+
+Neither is vendored into this repository. `.mooncakes/` is generated locally by
+the toolchain from the module registry and is not part of the source
+distribution.
+
+Note that the library package (`csvkit` itself) declares **no** dependencies. It
+is pure MoonBit and can be compiled for any backend. The `moonbitlang/x/fs`
+dependency is declared `for "test"` in `moon.pkg`, and the CLI declares its own
+imports separately in `cmd/main/moon.pkg`.
+
+### At development time
+
+| Component | Role | Licence |
+| --- | --- | --- |
+| Python 3 standard library (`csv`, `json`, `base64`) | Generates the differential corpus and acts as the reference implementation | PSF-2.0 |
+
+**Python's `csv` module is used as an oracle, not as a dependency.**
+`tools/gen_differential.py` runs Python's `csv.writer` and `csv.reader` over a
+generated corpus of documents and records the results in
+`testdata/differential.tsv`. That file contains *behavioural output* — CSV
+documents and the records recovered from them — not Python source code or
+Python bytecode.
+
+The corpus data is therefore not a derivative work of Python; it is the record
+of an experiment, and it is treated as such. It is redistributed here under the
+same Apache-2.0 terms as the rest of the repository, with this notice
+documenting where it came from. Python's `csv` module itself is not
+redistributed.
+
+The test that consumes the corpus (`conformance_differential_test.mbt`) does not
+invoke Python. It reads the checked-in file, so `moon test` needs only the
+MoonBit toolchain. Python is required only to *regenerate* the corpus.
+
+## Fonts, images and other assets
+
+None. The repository contains no binary assets, no bundled fonts, and no
+third-party images.
+
+## Trademarks
+
+"MoonBit" is a project of MoonBit Technology Ltd.; "Python" is a registered
+trademark of the Python Software Foundation. Neither is affiliated with this
+project, and neither has endorsed it. The names appear here only to identify the
+tools and the reference implementation accurately.
+
+## Contact
+
+Issues and provenance questions:
+<https://github.com/BenPaoBaMingWangXing/csvkit/issues>

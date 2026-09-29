@@ -1,0 +1,95 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "BenPaoBaMingWangXing/csvkit"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn check_field_counts(Array[Array[String]]) -> Result[Array[Array[String]], CsvError]
+
+pub fn count_fields_per_record(String) -> Result[Array[Int], CsvError]
+
+pub fn diagnose(Array[Array[String]]) -> Report
+
+pub fn looks_like_header(Array[Array[String]]) -> Bool
+
+pub fn needs_quoting(String, Dialect) -> Bool
+
+pub fn parse(String) -> Result[Array[Array[String]], CsvError]
+
+pub fn parse_strict(String) -> Result[Array[Array[String]], CsvError]
+
+pub fn parse_with(String, Dialect) -> Result[Array[Array[String]], CsvError]
+
+pub fn serialize(Array[Array[String]]) -> String
+
+pub fn serialize_row(Array[String], Dialect) -> String
+
+pub fn serialize_with(Array[Array[String]], Dialect) -> String
+
+pub fn version() -> String
+
+// Errors
+
+// Types and methods
+pub enum CsvError {
+  UnterminatedQuotedField(Position)
+  UnescapedQuoteInQuotedField(Position)
+  UnexpectedLineBreak(Position, String)
+  FieldCountMismatch(line~ : Int, expected~ : Int, actual~ : Int)
+} derive(Eq, @debug.Debug)
+pub fn CsvError::to_message(Self) -> String
+
+pub struct Dialect {
+  separator : RecordSeparator
+  delimiter : Char
+  quote : Char
+  strip_bom : Bool
+} derive(Eq, @debug.Debug)
+pub fn Dialect::excel() -> Self
+pub fn Dialect::rfc4180() -> Self
+pub fn Dialect::semicolon() -> Self
+pub fn Dialect::strict_crlf() -> Self
+pub fn Dialect::strict_lf() -> Self
+pub fn Dialect::tab() -> Self
+pub fn Dialect::with_bom_stripping(Self, Bool) -> Self
+pub fn Dialect::with_delimiter(Self, Char) -> Self
+
+pub enum HeaderProblem {
+  Empty
+  Duplicated(String)
+} derive(Eq, @debug.Debug)
+
+pub enum Issue {
+  Ragged(Int, Int, Int)
+  BlankLine(Int)
+  Duplicate(Int, Int)
+  HeaderProblem(Int, HeaderProblem)
+} derive(Eq, @debug.Debug)
+
+pub struct Position {
+  line : Int
+  column : Int
+} derive(Eq, @debug.Debug)
+
+pub enum RecordSeparator {
+  Any
+  Crlf
+  Lf
+} derive(Eq, @debug.Debug)
+
+pub struct Report {
+  records : Int
+  columns : Int
+  issues : Array[Issue]
+} derive(Eq, @debug.Debug)
+pub fn Report::is_clean(Self) -> Bool
+pub fn Report::to_lines(Self) -> Array[String]
+
+// Type aliases
+pub type Row = Array[String]
+
+pub type Table = Array[Array[String]]
+
+// Traits

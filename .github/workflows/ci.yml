@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # The whole-repository check. A reviewer should be able to see, from one green
+  # job, that the module type-checks, builds, and passes every test.
+  check-build-test:
+    name: check + build + test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: Toolchain versions
+        run: moon version --all
+
+      - name: Type check
+        # Deny warnings here so a new deprecated-API usage fails the build
+        # rather than accumulating. The codebase is currently warning-free.
+        run: moon check --deny-warn
+
+      - name: Build every target
+        # wasm, wasm-gc, js and native. The library is pure MoonBit with no
+        # FFI, so all four must build; a failure here means a portability
+        # regression.
+        run: moon build --target all
+
+      - name: Tests
+        # 60 tests. Includes the differential conformance suite, which reads
+        # testdata/differential.tsv and compares csvkit against the expected
+        # output of an independent implementation (see NOTICE).
+        run: moon test --target all
+
+      - name: Report test counts
+        run: moon test --target wasm --verbose 2>&1 | tail -5
+
+  # The library must be usable from a real program, not just from its own
+  # tests. This job exercises the CLI on the checked-in example file.
+  cli:
+    name: CLI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: version
+        run: moon run cmd/main -- version
+
+      - name: count
+        run: moon run cmd/main -- count examples/people.csv
+
+      - name: re-serialize
+        run: moon run cmd/main -- csv examples/people.csv
+
+      - name: check reports issues on a ragged file
+        # `check` exits 1 when it finds an issue, so invert the expectation
+        # explicitly instead of letting the step simply fail.
+        run: |
+          if moon run cmd/main -- check examples/people.csv; then
+            echo "::error::expected `check` to report a ragged row and exit 1"
+            exit 1
+          else
+            echo "check exited non-zero as expected"
+          fi
+
+  # The differential corpus is checked in because the test reads it, but it must
+  # be reproducible from its generator. If this job fails, either the generator
+  # was not re-run after a change or the .tsv was edited by hand.
+  generated-files-are-current:
+    name: generated corpus is current
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Regenerate the differential corpus
+        # Pure standard library, no pip install needed.
+        run: python3 tools/gen_differential.py
+
+      - name: Fail if regeneration changed anything
+        run: |
+          if ! git diff --quiet; then
+            echo "::error::testdata/differential.tsv is out of date; re-run tools/gen_differential.py and commit the result"
+            git --no-pager diff --stat
+            exit 1
+          fi
+
+  # Packaging proves the module metadata is coherent: name, version, license,
+  # readme and repository all have to resolve for `moon package` to succeed.
+  package:
+    name: package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: Package the module
+        run: moon package
+
+      - name: Show the produced archive
+        run: ls -l _build/publish/

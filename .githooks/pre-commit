@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# Pre-commit guard. Enable with:
+#   git config core.hooksPath .githooks
+#
+# Deliberately short: a hook that takes too long gets bypassed, and a bypassed
+# hook is worse than no hook because it creates false confidence. The full
+# suite (all targets, CLI, packaging, corpus reproducibility) belongs in CI.
+
+set -e
+
+moon check --deny-warn
+moon test --target wasm
+
+# Generated artefacts must be reproducible from their scripts. This is the same
+# check CI runs; doing it here means a stale corpus never reaches a commit.
+if command -v python3 >/dev/null 2>&1; then
+  python3 tools/gen_differential.py >/dev/null
+  if ! git diff --quiet -- testdata/differential.tsv; then
+    echo "pre-commit: testdata/differential.tsv changed after regeneration." >&2
+    echo "pre-commit: stage the regenerated file, and do not edit it by hand." >&2
+    exit 1
+  fi
+else
+  echo "pre-commit: python3 not found; skipping corpus reproducibility check." >&2
+fi
