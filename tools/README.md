@@ -69,3 +69,36 @@ the README's known limitations.
 Before writing a case, the generator verifies that reading back the document it
 just wrote reproduces the table it started from. If that ever fails the script
 exits non-zero rather than emitting a corpus that encodes a false expectation.
+
+## `report_size.py`
+
+Prints the code-size figures quoted in the submission documents, and (with
+`--check`) verifies that the prose still agrees with the sources.
+
+```bash
+python3 tools/report_size.py            # print the figures
+python3 tools/report_size.py --check    # exit non-zero if a document is stale
+```
+
+Requirements: Python 3.8 or newer. Standard library only.
+
+### Why it exists
+
+The documents state how many lines the library, the tests and the CLI occupy.
+Those numbers are easy to write by hand and easy to leave behind: after one
+round of edits, three documents were quoting three different values for the
+same measurement. A reviewer comparing the prose against the repository would
+have been right to call that out.
+
+The counting convention is **total lines, blank lines included** — the figure
+`wc -l` and GitHub's file view report. That choice is stated here rather than
+left implicit, so the number can be reproduced without guessing.
+
+### What it counts
+
+- **library** — `types` / `parser` / `writer` / `diagnostics` / `dialect` /
+  `csvkit`, i.e. the root package excluding tests.
+- **CLI** — `cmd/main/main.mbt`.
+- **tests** — every `*_test.mbt` / `*_wbtest.mbt`.
+- **test cases** — `test` blocks, counted by pattern.
+- **corpus cases** — non-empty lines in `testdata/differential.tsv`.
