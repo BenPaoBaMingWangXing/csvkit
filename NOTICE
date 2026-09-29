@@ -37,16 +37,18 @@ the diagnostics in `diagnostics.mbt` are original.
 | Component | Role | Licence |
 | --- | --- | --- |
 | MoonBit toolchain (`moon`, `moonc`, core library) | Compiles and provides the standard library | Apache-2.0 |
-| `moonbitlang/x@0.5.5` | `fs` for reading files, `sys` for exit codes — **used by the CLI and by one test only** | Apache-2.0 |
+| `moonbitlang/x@0.5.5` | `fs` for reading files, `sys` for exit codes — **used by the CLI and by one test only; the library itself depends on core alone** | Apache-2.0 |
 
 Neither is vendored into this repository. `.mooncakes/` is generated locally by
 the toolchain from the module registry and is not part of the source
 distribution.
 
-Note that the library package (`csvkit` itself) declares **no** dependencies. It
-is pure MoonBit and can be compiled for any backend. The `moonbitlang/x/fs`
-dependency is declared `for "test"` in `moon.pkg`, and the CLI declares its own
-imports separately in `cmd/main/moon.pkg`.
+Note that the library package (`csvkit` itself) depends only on the MoonBit
+core library. It is pure MoonBit and can be compiled for any backend. Its
+`moonbitlang/core/debug` import is core, and the `moonbitlang/x/fs` dependency
+is declared `for "test"` in `moon.pkg`; the CLI declares its own imports
+separately in `cmd/main/moon.pkg` (including `moonbitlang/x/sys` for exit codes
+and `moonbitlang/core/env` for arguments).
 
 ### At development time
 

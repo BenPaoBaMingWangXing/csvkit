@@ -42,8 +42,8 @@ moon add BenPaoBaMingWangXing/csvkit
 ```
 
 Requires `moon` 0.1.20260904 or newer (`moon version --all`). The library
-package has **no dependencies**; `moonbitlang/x` is used only by the CLI and by
-one test.
+package depends only on the MoonBit core library; `moonbitlang/x` is used only
+by the CLI and by one test.
 
 ## Usage
 

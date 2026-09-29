@@ -36,6 +36,11 @@ pub enum RecordSeparator {
   Lf
 } derive(Eq, Debug)
 
+// The promotion is deliberate: `Eq` and `Debug` are part of the public
+// surface of this type, so it is declared here rather than left implicit.
+pub extend RecordSeparator with Eq::{not_equal, equal}
+pub extend RecordSeparator with @moonbitlang/core/debug.Debug::{to_repr}
+
 ///|
 /// Knobs for the parts RFC 4180 leaves undefined or that producers implement
 /// differently. Every option defaults to the strict RFC reading, so
@@ -50,6 +55,11 @@ pub struct Dialect {
   /// Strip a leading UTF-8 BOM before parsing. Default: false.
   strip_bom : Bool
 } derive(Eq, Debug)
+
+// The promotion is deliberate: `Eq` and `Debug` are part of the public
+// surface of this type, so it is declared here rather than left implicit.
+pub extend Dialect with Eq::{not_equal, equal}
+pub extend Dialect with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// The strict RFC 4180 dialect: comma delimiter, double-quote quoting, CRLF

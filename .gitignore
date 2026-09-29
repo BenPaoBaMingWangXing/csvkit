@@ -1,6 +1,12 @@
 .DS_Store
+
+# MoonBit build output and resolved dependencies.
 _build/
 target/
 target
 .mooncakes/
 .moonagent/
+
+# Scratch output from local runs. Nothing generated at the repository root is
+# tracked; the differential corpus lives under testdata/ and is checked in.
+_*.log

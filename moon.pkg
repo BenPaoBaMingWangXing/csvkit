@@ -1,10 +1,15 @@
 // The csvkit library package.
 //
-// The library itself declares no imports, so it can be compiled for any
-// backend and embedded without pulling in anything else. The only dependency
-// is `moonbitlang/x/fs`, and only the differential conformance test needs it
-// to read `testdata/differential.tsv`; it is therefore declared as a
-// test-only import.
+// `moonbitlang/core/debug` is imported because the public types declare their
+// `Debug` promotion explicitly (`pub extend T with Debug::{to_repr}`); naming
+// the package in the source requires importing it.
+//
+// `moonbitlang/x/fs` is a test-only import: only the differential conformance
+// test needs it, to read `testdata/differential.tsv`. Nothing in the shipped
+// library pulls in a non-core dependency.
+import {
+  "moonbitlang/core/debug",
+}
 import {
   "moonbitlang/x/fs",
 } for "test"

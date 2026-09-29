@@ -29,6 +29,11 @@ pub struct Position {
   column : Int
 } derive(Eq, Debug)
 
+// The promotion is deliberate: `Eq` and `Debug` are part of the public
+// surface of this type, so it is declared here rather than left implicit.
+pub extend Position with Eq::{not_equal, equal}
+pub extend Position with @moonbitlang/core/debug.Debug::{to_repr}
+
 ///|
 /// Errors that prevent a document from being parsed or serialized.
 ///
@@ -55,6 +60,11 @@ pub enum CsvError {
   /// RFC 4180 does not mandate uniform field counts.
   FieldCountMismatch(line~ : Int, expected~ : Int, actual~ : Int)
 } derive(Eq, Debug)
+
+// The promotion is deliberate: `Eq` and `Debug` are part of the public
+// surface of this type, so it is declared here rather than left implicit.
+pub extend CsvError with Eq::{not_equal, equal}
+pub extend CsvError with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Human-readable rendering of an error, suitable for CLI output.

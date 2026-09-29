@@ -15,6 +15,11 @@ pub enum HeaderProblem {
   Duplicated(String)
 } derive(Eq, Debug)
 
+// The promotion is deliberate: `Eq` and `Debug` are part of the public
+// surface of this type, so it is declared here rather than left implicit.
+pub extend HeaderProblem with Eq::{not_equal, equal}
+pub extend HeaderProblem with @moonbitlang/core/debug.Debug::{to_repr}
+
 ///|
 /// One irregularity found in a document.
 ///
@@ -31,6 +36,11 @@ pub enum Issue {
   HeaderProblem(Int, HeaderProblem) // column, kind
 } derive(Eq, Debug)
 
+// The promotion is deliberate: `Eq` and `Debug` are part of the public
+// surface of this type, so it is declared here rather than left implicit.
+pub extend Issue with Eq::{not_equal, equal}
+pub extend Issue with @moonbitlang/core/debug.Debug::{to_repr}
+
 ///|
 /// A structural report over a parsed table.
 pub struct Report {
@@ -41,6 +51,11 @@ pub struct Report {
   /// Irregularities in file order.
   issues : Array[Issue]
 } derive(Eq, Debug)
+
+// The promotion is deliberate: `Eq` and `Debug` are part of the public
+// surface of this type, so it is declared here rather than left implicit.
+pub extend Report with Eq::{not_equal, equal}
+pub extend Report with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Whether the report found no irregularities.
