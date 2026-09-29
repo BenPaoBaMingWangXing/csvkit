@@ -19,7 +19,7 @@
 /// One differential case: a document and the records the reference recovers.
 struct DifferentialCase {
   doc : String
-  expected : Table
+  expected : @csvkit.Table
 }
 
 ///|
@@ -68,11 +68,11 @@ fn load_differential(path : String) -> Array[DifferentialCase] raise {
 /// The reference output is a JSON array of arrays of strings, so this reads it
 /// directly. It handles the escape sequences Python's `json.dumps` emits with
 /// `ensure_ascii=False`: `\"`, `\\`, `\n`, `\r`, `\t` and `\uXXXX`.
-fn parse_expected(source : String) -> Table {
-  let out : Table = []
+fn parse_expected(source : String) -> @csvkit.Table {
+  let out : @csvkit.Table = []
   let chars = source.to_array()
   let mut i = 0
-  let mut row : Row = []
+  let mut row : @csvkit.Row = []
   let buf = StringBuilder()
   let mut in_str = false
   let mut in_row = false
@@ -203,7 +203,7 @@ fn base64_value(c : Char) -> Int? {
 
 ///|
 /// Field-wise table equality.
-fn tables_equal(a : Table, b : Table) -> Bool {
+fn tables_equal(a : @csvkit.Table, b : @csvkit.Table) -> Bool {
   if a.length() != b.length() {
     return false
   }
@@ -240,7 +240,7 @@ test "differential: csvkit agrees with Python csv on the full corpus" {
   let mut first_bad = -1
   let mut i = 0
   while i < cases.length() {
-    let agree = match parse(cases[i].doc) {
+    let agree = match @csvkit.parse(cases[i].doc) {
       Err(_) => false
       Ok(rows) => tables_equal(rows, cases[i].expected)
     }
@@ -272,7 +272,7 @@ test "differential: serialize/parse round-trips every corpus table" {
   let mut i = 0
   while i < cases.length() {
     let original = cases[i].expected
-    let ok = match parse(serialize(original)) {
+    let ok = match @csvkit.parse(@csvkit.serialize(original)) {
       Err(_) => false
       Ok(back) => tables_equal(back, original)
     }

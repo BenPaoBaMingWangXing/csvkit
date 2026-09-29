@@ -17,7 +17,11 @@ pub enum HeaderProblem {
 
 // The promotion is deliberate: `Eq` and `Debug` are part of the public
 // surface of this type, so it is declared here rather than left implicit.
+
+///|
 pub extend HeaderProblem with Eq::{not_equal, equal}
+
+///|
 pub extend HeaderProblem with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
@@ -38,7 +42,11 @@ pub enum Issue {
 
 // The promotion is deliberate: `Eq` and `Debug` are part of the public
 // surface of this type, so it is declared here rather than left implicit.
+
+///|
 pub extend Issue with Eq::{not_equal, equal}
+
+///|
 pub extend Issue with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
@@ -54,7 +62,11 @@ pub struct Report {
 
 // The promotion is deliberate: `Eq` and `Debug` are part of the public
 // surface of this type, so it is declared here rather than left implicit.
+
+///|
 pub extend Report with Eq::{not_equal, equal}
+
+///|
 pub extend Report with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|

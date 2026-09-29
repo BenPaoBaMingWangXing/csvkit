@@ -38,7 +38,11 @@ pub enum RecordSeparator {
 
 // The promotion is deliberate: `Eq` and `Debug` are part of the public
 // surface of this type, so it is declared here rather than left implicit.
+
+///|
 pub extend RecordSeparator with Eq::{not_equal, equal}
+
+///|
 pub extend RecordSeparator with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
@@ -58,7 +62,11 @@ pub struct Dialect {
 
 // The promotion is deliberate: `Eq` and `Debug` are part of the public
 // surface of this type, so it is declared here rather than left implicit.
+
+///|
 pub extend Dialect with Eq::{not_equal, equal}
+
+///|
 pub extend Dialect with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|

@@ -29,6 +29,11 @@ jobs:
         # fails with "module was not found in the registry" without this.
         run: moon update
 
+      - name: Formatting
+        # Checked, never applied: CI must not rewrite the tree it is judging,
+        # and `moon fmt` needs git on PATH to render its diff.
+        run: moon fmt --check
+
       - name: Type check
         # Deny warnings here so a new deprecated-API usage fails the build
         # rather than accumulating. The codebase is currently warning-free.

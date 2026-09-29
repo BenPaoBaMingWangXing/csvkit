@@ -39,7 +39,10 @@ pub enum CsvError {
   UnexpectedLineBreak(Position, String)
   FieldCountMismatch(line~ : Int, expected~ : Int, actual~ : Int)
 } derive(Eq, @debug.Debug)
+pub fn CsvError::equal(Self, Self) -> Bool
+pub fn CsvError::not_equal(Self, Self) -> Bool
 pub fn CsvError::to_message(Self) -> String
+pub fn CsvError::to_repr(Self) -> @debug.Repr
 
 pub struct Dialect {
   separator : RecordSeparator
@@ -47,12 +50,15 @@ pub struct Dialect {
   quote : Char
   strip_bom : Bool
 } derive(Eq, @debug.Debug)
+pub fn Dialect::equal(Self, Self) -> Bool
 pub fn Dialect::excel() -> Self
+pub fn Dialect::not_equal(Self, Self) -> Bool
 pub fn Dialect::rfc4180() -> Self
 pub fn Dialect::semicolon() -> Self
 pub fn Dialect::strict_crlf() -> Self
 pub fn Dialect::strict_lf() -> Self
 pub fn Dialect::tab() -> Self
+pub fn Dialect::to_repr(Self) -> @debug.Repr
 pub fn Dialect::with_bom_stripping(Self, Bool) -> Self
 pub fn Dialect::with_delimiter(Self, Char) -> Self
 
@@ -60,6 +66,9 @@ pub enum HeaderProblem {
   Empty
   Duplicated(String)
 } derive(Eq, @debug.Debug)
+pub fn HeaderProblem::equal(Self, Self) -> Bool
+pub fn HeaderProblem::not_equal(Self, Self) -> Bool
+pub fn HeaderProblem::to_repr(Self) -> @debug.Repr
 
 pub enum Issue {
   Ragged(Int, Int, Int)
@@ -67,25 +76,37 @@ pub enum Issue {
   Duplicate(Int, Int)
   HeaderProblem(Int, HeaderProblem)
 } derive(Eq, @debug.Debug)
+pub fn Issue::equal(Self, Self) -> Bool
+pub fn Issue::not_equal(Self, Self) -> Bool
+pub fn Issue::to_repr(Self) -> @debug.Repr
 
 pub struct Position {
   line : Int
   column : Int
 } derive(Eq, @debug.Debug)
+pub fn Position::equal(Self, Self) -> Bool
+pub fn Position::not_equal(Self, Self) -> Bool
+pub fn Position::to_repr(Self) -> @debug.Repr
 
 pub enum RecordSeparator {
   Any
   Crlf
   Lf
 } derive(Eq, @debug.Debug)
+pub fn RecordSeparator::equal(Self, Self) -> Bool
+pub fn RecordSeparator::not_equal(Self, Self) -> Bool
+pub fn RecordSeparator::to_repr(Self) -> @debug.Repr
 
 pub struct Report {
   records : Int
   columns : Int
   issues : Array[Issue]
 } derive(Eq, @debug.Debug)
+pub fn Report::equal(Self, Self) -> Bool
 pub fn Report::is_clean(Self) -> Bool
+pub fn Report::not_equal(Self, Self) -> Bool
 pub fn Report::to_lines(Self) -> Array[String]
+pub fn Report::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 pub type Row = Array[String]

@@ -31,7 +31,11 @@ pub struct Position {
 
 // The promotion is deliberate: `Eq` and `Debug` are part of the public
 // surface of this type, so it is declared here rather than left implicit.
+
+///|
 pub extend Position with Eq::{not_equal, equal}
+
+///|
 pub extend Position with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
@@ -63,7 +67,11 @@ pub enum CsvError {
 
 // The promotion is deliberate: `Eq` and `Debug` are part of the public
 // surface of this type, so it is declared here rather than left implicit.
+
+///|
 pub extend CsvError with Eq::{not_equal, equal}
+
+///|
 pub extend CsvError with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|

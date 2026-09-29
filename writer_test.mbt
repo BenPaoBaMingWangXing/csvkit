@@ -8,40 +8,43 @@
 /// A field containing the delimiter must be quoted, otherwise the reader would
 /// split it in two.
 test "writer: delimits with a comma inside a field are quoted" {
-  inspect(serialize([["a,b", "c"]]), content="\"a,b\",c\r\n")
+  inspect(@csvkit.serialize([["a,b", "c"]]), content="\"a,b\",c\r\n")
 }
 
 ///|
 /// A quote inside a field is doubled, and the field is quoted.
 test "writer: quotes are doubled" {
-  inspect(serialize([["say \"hi\"", "x"]]), content="\"say \"\"hi\"\"\",x\r\n")
+  inspect(
+    @csvkit.serialize([["say \"hi\"", "x"]]),
+    content="\"say \"\"hi\"\"\",x\r\n",
+  )
 }
 
 ///|
 /// Embedded CRLF forces quoting; without it the reader would see two records.
 test "writer: embedded newline forces quoting" {
-  inspect(serialize([["a\nb", "c"]]), content="\"a\nb\",c\r\n")
+  inspect(@csvkit.serialize([["a\nb", "c"]]), content="\"a\nb\",c\r\n")
 }
 
 ///|
 /// Leading and trailing whitespace is quoted defensively, because many readers
 /// trim it and the round-trip would then lose characters.
 test "writer: leading and trailing spaces are quoted" {
-  inspect(serialize([[" x", "y "]]), content="\" x\",\"y \"\r\n")
+  inspect(@csvkit.serialize([[" x", "y "]]), content="\" x\",\"y \"\r\n")
 }
 
 ///|
 /// Interior spaces are not special and must not be quoted, or the output would
 /// differ from every other CSV writer for no reason.
 test "writer: interior spaces are not quoted" {
-  inspect(serialize([["a b", "c"]]), content="a b,c\r\n")
+  inspect(@csvkit.serialize([["a b", "c"]]), content="a b,c\r\n")
 }
 
 ///|
 /// The empty field in the middle of a record needs no quotes: the delimiters
 /// already define it unambiguously.
 test "writer: empty middle field is not quoted" {
-  inspect(serialize([["a", "", "c"]]), content="a,,c\r\n")
+  inspect(@csvkit.serialize([["a", "", "c"]]), content="a,,c\r\n")
 }
 
 ///|
@@ -50,22 +53,28 @@ test "writer: empty middle field is not quoted" {
 /// round-trips — the one place where the writer deliberately deviates from
 /// "quote only when necessary".
 test "writer: lone empty field is quoted to survive round-trip" {
-  inspect(serialize([[""]]), content="\"\"\r\n")
-  inspect(parse(serialize([[""]])).unwrap().length(), content="1")
-  inspect(parse(serialize([[""]])).unwrap()[0][0], content="")
+  inspect(@csvkit.serialize([[""]]), content="\"\"\r\n")
+  inspect(
+    @csvkit.parse(@csvkit.serialize([[""]])).unwrap().length(),
+    content="1",
+  )
+  inspect(@csvkit.parse(@csvkit.serialize([[""]])).unwrap()[0][0], content="")
 }
 
 ///|
 /// The LF dialect writes LF-only line endings.
 test "writer: LF dialect uses LF endings" {
-  inspect(serialize_with([["a", "b"]], Dialect::strict_lf()), content="a,b\n")
+  inspect(
+    @csvkit.serialize_with([["a", "b"]], @csvkit.Dialect::strict_lf()),
+    content="a,b\n",
+  )
 }
 
 ///|
 /// The semicolon dialect quotes the delimiter it actually uses, not a comma.
 test "writer: semicolon dialect quotes semicolons" {
   inspect(
-    serialize_with([["a;b", "c"]], Dialect::semicolon()),
+    @csvkit.serialize_with([["a;b", "c"]], @csvkit.Dialect::semicolon()),
     content="\"a;b\";c\r\n",
   )
 }
@@ -75,7 +84,7 @@ test "writer: semicolon dialect quotes semicolons" {
 /// `Array[Array[String]]`, and a type alias cannot carry `derive(Debug)`, so
 /// the round-trip loop needs its own helper to avoid `Show` (which would
 /// truncate long values).
-fn render(table : Table) -> String {
+fn render(table : @csvkit.Table) -> String {
   let parts : Array[String] = []
   for row in table {
     let cells : Array[String] = []
@@ -90,7 +99,7 @@ fn render(table : Table) -> String {
 ///|
 /// Round-trip over hand-written tables covering every quoting rule at once.
 test "writer: round-trips hand-written tables" {
-  let tables : Array[Table] = [
+  let tables : Array[@csvkit.Table] = [
     [["a", "b", "c"]],
     [["a", "", "c"]],
     [["", ""]],
@@ -105,7 +114,7 @@ test "writer: round-trips hand-written tables" {
   let mut i = 0
   while i < tables.length() {
     let original = tables[i]
-    let back = parse(serialize(original)).unwrap()
+    let back = @csvkit.parse(@csvkit.serialize(original)).unwrap()
     let mut ok = back.length() == original.length()
     if ok {
       let mut r = 0
@@ -136,28 +145,31 @@ test "writer: round-trips hand-written tables" {
 /// `needs_quoting` is the public predicate behind the writer's decisions, so its
 /// answers are pinned individually.
 test "writer: needs_quoting predicate" {
-  let d = Dialect::rfc4180()
-  inspect(needs_quoting("plain", d), content="false")
-  inspect(needs_quoting("a,b", d), content="true")
-  inspect(needs_quoting("a\"b", d), content="true")
-  inspect(needs_quoting("a\nb", d), content="true")
-  inspect(needs_quoting("a\rb", d), content="true")
-  inspect(needs_quoting(" a", d), content="true")
-  inspect(needs_quoting("a ", d), content="true")
-  inspect(needs_quoting("", d), content="false")
-  inspect(needs_quoting("a\tb", d), content="false")
+  let d = @csvkit.Dialect::rfc4180()
+  inspect(@csvkit.needs_quoting("plain", d), content="false")
+  inspect(@csvkit.needs_quoting("a,b", d), content="true")
+  inspect(@csvkit.needs_quoting("a\"b", d), content="true")
+  inspect(@csvkit.needs_quoting("a\nb", d), content="true")
+  inspect(@csvkit.needs_quoting("a\rb", d), content="true")
+  inspect(@csvkit.needs_quoting(" a", d), content="true")
+  inspect(@csvkit.needs_quoting("a ", d), content="true")
+  inspect(@csvkit.needs_quoting("", d), content="false")
+  inspect(@csvkit.needs_quoting("a\tb", d), content="false")
 }
 
 ///|
 /// An empty table serializes to the empty string, and an empty string parses
 /// back to an empty table.
 test "writer: empty table is stable" {
-  inspect(serialize([]), content="")
-  inspect(parse("").unwrap().length(), content="0")
+  inspect(@csvkit.serialize([]), content="")
+  inspect(@csvkit.parse("").unwrap().length(), content="0")
 }
 
 ///|
 /// `serialize_row` writes one record with no trailing line ending.
 test "writer: serialize_row omits the line ending" {
-  inspect(serialize_row(["a", "b,c"], Dialect::rfc4180()), content="a,\"b,c\"")
+  inspect(
+    @csvkit.serialize_row(["a", "b,c"], @csvkit.Dialect::rfc4180()),
+    content="a,\"b,c\"",
+  )
 }

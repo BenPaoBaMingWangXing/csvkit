@@ -9,6 +9,11 @@
 
 set -e
 
+# Formatting is checked, not applied: the hook must not edit the user's working
+# tree behind their back. Adding a `@csvkit.` prefix can push a line past the
+# formatter's width limit, so this is a real failure mode, not a nicety.
+moon fmt --check
+
 moon check --deny-warn
 moon test --target wasm
 
