@@ -45,7 +45,7 @@ at tests that do not exist is worse than no matrix.
 ```bash
 moon check --deny-warn                 # type check, warnings fatal
 moon build --target wasm               # build
-moon test                              # 60 tests
+moon test                              # 64 tests
 moon fmt                               # format
 moon info                              # refresh pkg.generated.mbti
 ```

@@ -23,4 +23,6 @@ description = "RFC 4180 CSV parsing, serialisation and structural diagnostics, w
 
 import {
   "moonbitlang/x@0.5.5",
+  "maria/csv_parser@0.1.0",
+  "CJR-zhang/mbitsv@0.1.0",
 }

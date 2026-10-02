@@ -217,7 +217,7 @@ in.
 
 ```
 $ moon test
-Total tests: 60, passed: 60, failed: 0.
+Total tests: 64, passed: 64, failed: 0.
 ```
 
 Tests are split by the kind of claim they make:
@@ -226,6 +226,7 @@ Tests are split by the kind of claim they make:
 |---|---|---|
 | `conformance_test.mbt` | 28 | Grammar conformance, each case traced to RFC 4180 §2 |
 | `conformance_differential_test.mbt` | 2 | Agreement with an independent implementation |
+| `conformance_harness_test.mbt` | 4 | The conformance layer itself |
 | `writer_test.mbt` | 13 | Quoting rules and round-trip behaviour |
 | `diagnostics_test.mbt` | 17 | Structural reports |
 
@@ -236,6 +237,59 @@ enforced. Every test name it cites is a real one.
 CI additionally runs `moon check --deny-warn`, a build of every target
 (`wasm`, `wasm-gc`, `js`, `native`), the CLI, corpus reproducibility, and
 `moon package`.
+
+## Conformance layer
+
+The corpus above is not useful only to this library. `conformance.mbt` turns it
+into an instrument: it decodes the corpus, applies one set of comparison rules,
+and measures *any* implementation of the same grammar that can flatten its
+result to `Array[Array[String]]`.
+
+```moonbit
+pub(open) trait CsvCandidate {
+  label(Self) -> String
+  parse(Self, String) -> Result[Array[Array[String]], String]
+}
+
+pub fn[T : CsvCandidate] run_corpus(
+  candidate : T,
+  cases : Array[CorpusCase],
+  on_case : ((Int) -> Unit)?,
+) -> Summary
+```
+
+An adapter is meant to be thin, and to be honest about the one thing it has to
+absorb. `mbitsv` models a document as a header plus body rows; comparing its
+body rows against a headerless corpus would report every document as missing
+its first record, which would be a claim about an API design rather than about
+parsing. The adapter turns the header/body split off and says so in a comment.
+No adapter normalises a disagreement away — an adapter that did would be worse
+than no report, because it would manufacture a pass.
+
+Run it against the implementations that already existed:
+
+```
+$ moon run conformance -- --list
+csvkit
+maria
+mbitsv-default
+mbitsv-strict-off
+
+$ moon run conformance -- maria
+$ python3 tools/conformance_report.py        # regenerates the full report
+```
+
+One candidate per process, deliberately. A candidate is third-party code and
+third-party code can die: `maria/csv_parser` aborts on a document containing a
+character outside the Basic Multilingual Plane, and a MoonBit panic is not a
+`raise`, so `try`/`catch` does not see it. In a single process that abort would
+take the whole report with it. `tools/conformance_report.py` starts a fresh
+process per candidate and locates the fatal case by re-running with tracing.
+
+Results are published unedited in
+[`docs/ecosystem-conformance.md`](docs/ecosystem-conformance.md). The survey
+behind the choice of candidates — what exists, what overlaps, and what does
+not — is in [`docs/RESEARCH.md`](docs/RESEARCH.md).
 
 ## Known limitations
 
@@ -277,13 +331,17 @@ dialect.mbt                       Dialect, RecordSeparator
 parser.mbt                        the scanner
 writer.mbt                        the serializer
 diagnostics.mbt                   Issue, HeaderProblem, Report
-*_test.mbt                        four test suites, 60 tests
+*_test.mbt                        five test suites, 64 tests
+conformance.mbt                   the conformance layer (corpus, comparison, trait)
+conformance/                      adapters for other implementations + runner
 cmd/main/                         the command line tool
 examples/people.csv               sample input for the CLI
 testdata/differential.tsv         the corpus (1078 cases, generated)
 tools/gen_differential.py         regenerates the corpus
 docs/design.md                    why the design is the way it is
 docs/conformance.md               RFC clause -> test matrix
+docs/ecosystem-conformance.md     measured results for other implementations
+tools/conformance_report.py       regenerates that report
 NOTICE                            provenance
 SECURITY.md                       threat model and reporting
 CHANGELOG.md                      release notes

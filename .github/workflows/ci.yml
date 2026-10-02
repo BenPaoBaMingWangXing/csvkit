@@ -46,7 +46,7 @@ jobs:
         run: moon build --target all
 
       - name: Tests
-        # 60 tests. Includes the differential conformance suite, which reads
+        # 64 tests. Includes the differential conformance suite, which reads
         # testdata/differential.tsv and compares csvkit against the expected
         # output of an independent implementation (see NOTICE).
         run: moon test --target all
@@ -94,8 +94,13 @@ jobs:
   # The differential corpus is checked in because the test reads it, but it must
   # be reproducible from its generator. If this job fails, either the generator
   # was not re-run after a change or the .tsv was edited by hand.
+  #
+  # The same job guards the figures quoted in prose: `report_size.py --check`
+  # derives the line counts and the test-case count from the repository and
+  # fails if a document disagrees. Three documents once quoted three different
+  # values for the same measurement, which is what this step exists to prevent.
   generated-files-are-current:
-    name: generated corpus is current
+    name: generated files and quoted figures are current
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -110,6 +115,57 @@ jobs:
           if ! git diff --quiet; then
             echo "::error::testdata/differential.tsv is out of date; re-run tools/gen_differential.py and commit the result"
             git --no-pager diff --stat
+            exit 1
+          fi
+
+      - name: Quoted figures agree with the repository
+        run: python3 tools/report_size.py --check
+
+  # The conformance layer is a shipped capability, so it is exercised rather
+  # than merely compiled. Two independent things are asserted:
+  #
+  #   1. csvkit itself conforms. This is the library's own claim and it must
+  #      hold on every push.
+  #   2. The published ecosystem report still matches what the tool produces.
+  #      A third-party result changing is not a failure of this project, but an
+  #      un-regenerated report would be a document that no longer says what the
+  #      tool says, which is worse than not publishing one.
+  conformance:
+    name: conformance layer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: Update the registry index
+        run: moon update
+
+      - name: Build the conformance package
+        # A package of this module can only build for the intersection of its
+        # dependencies' supported targets. That is why `sikadi123/moonbit-csv`,
+        # which declares js and wasm-gc only, is not among the candidates: it
+        # would cost the module the `wasm` target that the library supports.
+        run: moon build conformance
+
+      - name: csvkit conforms to the corpus
+        run: |
+          moon run conformance -- csvkit | tee /tmp/csvkit.txt
+          if ! grep -q "1078/1078 conform" /tmp/csvkit.txt; then
+            echo "::error::csvkit no longer agrees with the reference on every corpus document"
+            exit 1
+          fi
+
+      - name: The published report is current
+        run: |
+          python3 tools/conformance_report.py
+          if ! git diff --quiet docs/ecosystem-conformance.md; then
+            echo "::error::docs/ecosystem-conformance.md is stale; re-run tools/conformance_report.py and commit the result"
+            git --no-pager diff --stat docs/ecosystem-conformance.md
             exit 1
           fi
 

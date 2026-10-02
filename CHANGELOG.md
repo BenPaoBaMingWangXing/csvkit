@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+**Conformance layer**
+
+- `conformance.mbt` — the corpus decoding, the comparison rules and a
+  `CsvCandidate` trait, so the differential corpus can be pointed at *any*
+  implementation rather than only at this one. Includes `run_corpus`,
+  `Verdict` (`Conform` / `Divergent` / `Rejected`), `Summary` and `Divergence`.
+  Refusing a document the reference accepts is counted as a divergence, and
+  reported separately from returning different records, because the two call for
+  different fixes.
+- `conformance/` — a package holding thin adapters for `maria/csv_parser` and
+  `CJR-zhang/mbitsv`, plus a runner that handles one candidate per process. One
+  process per candidate because candidates are third-party code and can panic,
+  and a MoonBit panic is not catchable.
+- `tools/conformance_report.py` — sequences the per-candidate runs, records a
+  candidate that dies as ABORTED, and locates the fatal case by re-running with
+  tracing.
+- `docs/RESEARCH.md` — the ecosystem survey and the boundary statement.
+- `docs/ecosystem-conformance.md` — measured results for three implementations,
+  generated rather than written.
+- Four tests covering the conformance layer itself, including one that pins the
+  `Divergent` / `Rejected` distinction.
+
+### Fixed
+
+- **The corpus decoder widened UTF-8 bytes to individual characters.** base64
+  yields bytes, and building the result with a byte-to-`Char` widening turned
+  `é` into `Ã©` and `🙂` into four characters. Both sides of the differential
+  comparison went through the same decoder, so it never showed up as a failure —
+  the test was comparing a shifted representation, quietly testing less than it
+  claimed. Decoding is now base64 → bytes → UTF-8. The corpus still passes
+  1078/1078 afterwards, which is the point: the evidence now covers real text.
+- `tools/report_size.py --check` verified a single quoted figure (the corpus
+  size), so the test-case count and the line counts could go stale unnoticed —
+  and they had. It now checks six figures across three documents, and the
+  behaviour is pinned by a negative test.
+
+### Changed
+
+- Test count 60 → 64; test-suite line count 959 → 938.
+- CI gains a `conformance` job (asserts this library still conforms, and that
+  the published report is current); the generated-files job also checks that
+  quoted figures agree with the repository.
+- The differential test now goes through the same `conformance.mbt` code path
+  that is offered to other implementations, instead of carrying its own private
+  copies of the decoder and comparison.
+
 ## [0.1.0] — 2026-09-29
 
 Initial release. The scope is deliberately narrow: parse and serialise RFC 4180

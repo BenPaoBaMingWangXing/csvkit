@@ -11,217 +11,37 @@
 // seed (20260929); regeneration is deterministic, so a mismatch after
 // regenerating points at the parser, not the generator.
 //
-// File format: one case per line, `base64(document) TAB base64(json(records))`.
-// Base64 is used so that the file itself can never be confused with the CSV
-// under test, and so that embedded CR/LF survive every checkout setting.
+// Note what this file does *not* do: it does not decode the corpus or compare
+// tables itself. Those live in the library (`conformance.mbt`), because the
+// same machinery is offered to other MoonBit implementations through the
+// `conformance/` module. A conformance framework that only worked on its
+// author's parser would be worthless, so this library's own most important test
+// is routed through the exact code path the framework publishes. Only the file
+// read is local, since that is the one part the library cannot do without
+// taking on an I/O dependency.
 
 ///|
-/// One differential case: a document and the records the reference recovers.
-struct DifferentialCase {
-  doc : String
-  expected : @csvkit.Table
-}
-
-///|
-/// Load the corpus.
+/// Read the corpus and decode every line.
 ///
-/// Each line is `base64(document) TAB base64(json(records))`. Splitting is done
-/// on the *owned* `String` and by characters, not bytes: `StringView` indexes
-/// are byte offsets while `find` reports character positions, and mixing the two
-/// silently truncates any line containing multibyte text — which is exactly the
-/// kind of bug this corpus exists to catch, so it is worth stating.
-///
-/// Lines that do not split into two non-empty halves are skipped rather than
-/// aborting; the caller asserts a minimum case count so a genuinely broken file
-/// cannot turn the test into a no-op.
-fn load_differential(path : String) -> Array[DifferentialCase] raise {
-  let out : Array[DifferentialCase] = []
+/// Lines that fail to decode are skipped rather than aborting; the caller
+/// asserts a minimum case count so a genuinely broken file cannot turn the test
+/// into a no-op.
+fn load_differential(path : String) -> Array[@csvkit.CorpusCase] raise {
+  let out : Array[@csvkit.CorpusCase] = []
   let text = @fs.read_file_to_string(path)
   let lines : Array[StringView] = text.split("\n").collect()
   let mut i = 0
   while i < lines.length() {
-    let line = lines[i].to_owned()
-    if line.length() > 0 {
-      match line.find("\t") {
-        Some(t) => {
-          let doc_b64 = line[:t].to_owned()
-          let exp_b64 = line[t + 1:].to_owned()
-          if doc_b64.length() > 0 && exp_b64.length() > 0 {
-            match (base64_decode(doc_b64), base64_decode(exp_b64)) {
-              (Ok(doc), Ok(exp)) =>
-                out.push({ doc, expected: parse_expected(exp), })
-              _ => ()
-            }
-          }
-        }
-        None => ()
-      }
+    // Split on the owned String and by characters, not bytes: `StringView`
+    // indexes are byte offsets while `find` reports character positions, and
+    // mixing the two silently truncates any line containing multibyte text.
+    match @csvkit.decode_corpus_line(lines[i].to_owned()) {
+      Ok(case) => out.push(case)
+      Err(_) => ()
     }
     i = i + 1
   }
   out
-}
-
-///|
-/// Decode the compact records format used in the corpus.
-///
-/// The reference output is a JSON array of arrays of strings, so this reads it
-/// directly. It handles the escape sequences Python's `json.dumps` emits with
-/// `ensure_ascii=False`: `\"`, `\\`, `\n`, `\r`, `\t` and `\uXXXX`.
-fn parse_expected(source : String) -> @csvkit.Table {
-  let out : @csvkit.Table = []
-  let chars = source.to_array()
-  let mut i = 0
-  let mut row : @csvkit.Row = []
-  let buf = StringBuilder()
-  let mut in_str = false
-  let mut in_row = false
-  while i < chars.length() {
-    let c = chars[i]
-    if in_str {
-      if c == '\\' && i + 1 < chars.length() {
-        let e = chars[i + 1]
-        match e {
-          'n' => buf.write_char('\n')
-          'r' => buf.write_char('\r')
-          't' => buf.write_char('\t')
-          'b' => buf.write_char('\u{0008}')
-          'f' => buf.write_char('\u{000C}')
-          '"' => buf.write_char('"')
-          '\\' => buf.write_char('\\')
-          '/' => buf.write_char('/')
-          _ =>
-            // \uXXXX
-            if i + 5 < chars.length() {
-              buf.write_char(hex4(chars, i + 2))
-              i = i + 4
-            }
-        }
-        i = i + 2
-      } else if c == '"' {
-        in_str = false
-        row.push(buf.to_string())
-        buf.reset()
-        i = i + 1
-      } else {
-        buf.write_char(c)
-        i = i + 1
-      }
-    } else if c == '"' {
-      in_str = true
-      i = i + 1
-    } else if c == '[' {
-      in_row = true
-      row = []
-      i = i + 1
-    } else if c == ']' {
-      if in_row {
-        out.push(row.copy())
-        row = []
-        in_row = false
-      }
-      i = i + 1
-    } else {
-      i = i + 1
-    }
-  }
-  out
-}
-
-///|
-/// Read four hex digits as a Unicode scalar value.
-fn hex4(chars : Array[Char], at : Int) -> Char {
-  let mut v = 0
-  let mut k = 0
-  while k < 4 && at + k < chars.length() {
-    let d = chars[at + k]
-    let n = if d >= '0' && d <= '9' {
-      d.to_int() - '0'.to_int()
-    } else if d >= 'a' && d <= 'f' {
-      d.to_int() - 'a'.to_int() + 10
-    } else if d >= 'A' && d <= 'F' {
-      d.to_int() - 'A'.to_int() + 10
-    } else {
-      0
-    }
-    v = v * 16 + n
-    k = k + 1
-  }
-  v.unsafe_to_char()
-}
-
-///|
-/// Standard base64 alphabet decoding, tolerating missing padding.
-fn base64_decode(s : String) -> Result[String, String] {
-  let chars = s.to_array()
-  let out = StringBuilder()
-  let mut acc = 0
-  let mut bits = 0
-  let mut i = 0
-  while i < chars.length() {
-    let c = chars[i]
-    if c == '=' {
-      // Padding: stop.
-      i = chars.length()
-    } else {
-      match base64_value(c) {
-        None => return Err("invalid base64 character")
-        Some(v) => {
-          acc = (acc << 6) | v
-          bits = bits + 6
-          if bits >= 8 {
-            bits = bits - 8
-            let byte = (acc >> bits) & 0xFF
-            out.write_char(byte.unsafe_to_char())
-            acc = acc & ((1 << bits) - 1)
-          }
-        }
-      }
-      i = i + 1
-    }
-  }
-  Ok(out.to_string())
-}
-
-///|
-/// Map a base64 alphabet character to its 6-bit value.
-fn base64_value(c : Char) -> Int? {
-  if c >= 'A' && c <= 'Z' {
-    Some(c.to_int() - 'A'.to_int())
-  } else if c >= 'a' && c <= 'z' {
-    Some(c.to_int() - 'a'.to_int() + 26)
-  } else if c >= '0' && c <= '9' {
-    Some(c.to_int() - '0'.to_int() + 52)
-  } else if c == '+' {
-    Some(62)
-  } else if c == '/' {
-    Some(63)
-  } else {
-    None
-  }
-}
-
-///|
-/// Field-wise table equality.
-fn tables_equal(a : @csvkit.Table, b : @csvkit.Table) -> Bool {
-  if a.length() != b.length() {
-    return false
-  }
-  let mut r = 0
-  while r < a.length() {
-    if a[r].length() != b[r].length() {
-      return false
-    }
-    let mut c = 0
-    while c < a[r].length() {
-      if a[r][c] != b[r][c] {
-        return false
-      }
-      c = c + 1
-    }
-    r = r + 1
-  }
-  true
 }
 
 ///|
@@ -236,28 +56,17 @@ test "differential: csvkit agrees with Python csv on the full corpus" {
   // that adding cases does not require editing the test, but a corpus that
   // lost most of its content fails loudly.
   inspect(cases.length() >= 1000, content="true")
-  let mut mismatches = 0
-  let mut first_bad = -1
-  let mut i = 0
-  while i < cases.length() {
-    let agree = match @csvkit.parse(cases[i].doc) {
-      Err(_) => false
-      Ok(rows) => tables_equal(rows, cases[i].expected)
+  let summary = @csvkit.run_corpus(Csvkit, cases, None)
+  if !summary.is_fully_conforming() {
+    for sample in summary.divergent_samples {
+      println(sample.to_line())
     }
-    if !agree {
-      if first_bad < 0 {
-        first_bad = i
-      }
-      mismatches = mismatches + 1
+    for sample in summary.rejected_samples {
+      println(sample.to_line())
     }
-    i = i + 1
   }
-  if mismatches > 0 {
-    println(
-      "first mismatch at case \{first_bad}, doc = \{cases[first_bad].doc}",
-    )
-  }
-  inspect(mismatches, content="0")
+  println(summary.to_line())
+  inspect(summary.failures(), content="0")
 }
 
 ///|
@@ -274,7 +83,7 @@ test "differential: serialize/parse round-trips every corpus table" {
     let original = cases[i].expected
     let ok = match @csvkit.parse(@csvkit.serialize(original)) {
       Err(_) => false
-      Ok(back) => tables_equal(back, original)
+      Ok(back) => @csvkit.tables_equal(back, original)
     }
     if !ok {
       if first_bad < 0 {
@@ -288,4 +97,28 @@ test "differential: serialize/parse round-trips every corpus table" {
     println("first round-trip failure at case \{first_bad}")
   }
   inspect(failures, content="0")
+}
+
+///|
+/// `csvkit` itself, expressed as a corpus candidate.
+///
+/// This is the adapter shape the framework asks of everyone else: flatten your
+/// parser's result to `Array[Array[String]]`, or explain why you cannot. Having
+/// the library take its own medicine keeps the trait honest — if it were
+/// awkward to implement here, it would be awkward for a third party too.
+enum Csvkit {
+  Csvkit
+}
+
+///|
+impl @csvkit.CsvCandidate for Csvkit with fn label(_self) {
+  "BenPaoBaMingWangXing/csvkit"
+}
+
+///|
+impl @csvkit.CsvCandidate for Csvkit with fn parse(_self, input) {
+  match @csvkit.parse(input) {
+    Ok(rows) => Ok(rows)
+    Err(e) => Err(e.to_message())
+  }
 }

@@ -102,3 +102,41 @@ left implicit, so the number can be reproduced without guessing.
 - **tests** — every `*_test.mbt` / `*_wbtest.mbt`.
 - **test cases** — `test` blocks, counted by pattern.
 - **corpus cases** — non-empty lines in `testdata/differential.tsv`.
+
+## `conformance_report.py`
+
+```
+python3 tools/conformance_report.py            # write docs/ecosystem-conformance.md
+python3 tools/conformance_report.py --print    # print instead
+```
+
+Measures every candidate implementation against the differential corpus and
+writes the result. It makes no judgement of its own: the corpus decoding and the
+comparison rules come from `conformance.mbt`, reached through
+`moon run conformance`.
+
+### Why it is a driver rather than a MoonBit function
+
+A candidate is third-party code, and third-party code can die. `maria/csv_parser`
+aborts on a corpus document containing a character outside the Basic Multilingual
+Plane, and a MoonBit panic is not a `raise`, so `try`/`catch` never sees it — the
+process just ends. Running every candidate in one process would let one library's
+crash decide whether the report mentions the others.
+
+So the runner handles one candidate per process and this driver starts a fresh
+process for each, with a timeout. A candidate that dies is recorded as `ABORTED`
+against its own line and the rest of the report is unaffected.
+
+### Locating a fatal case
+
+When a candidate dies, the driver re-runs it with `--trace`, which makes the
+runner print each case immediately *before* handing it to the candidate. The last
+line printed therefore names the document that killed it — the difference between
+"this library crashed" and something a maintainer can act on.
+
+### Regeneration is checked
+
+CI regenerates the report and fails if the result differs from what is committed.
+A third-party result changing is not this project's failure, but a published
+document that no longer says what the tool says would be.
+

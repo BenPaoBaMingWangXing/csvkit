@@ -1,0 +1,38 @@
+// The csvkit conformance package.
+//
+// This package exists to answer a question the library itself cannot: *does the
+// rest of the MoonBit ecosystem agree with an independent reference on the same
+// grammar?* It is the executable half of the conformance layer — `csvkit`
+// provides the corpus decoding, the comparison rules and the candidate trait;
+// this package provides the adapters and the report.
+//
+// Why it is a package of this module rather than a module of its own
+// ------------------------------------------------------------------
+// A separate module would have to depend on `BenPaoBaMingWangXing/csvkit`, but
+// `moon.mod` only accepts versioned *registry* dependencies, and this module is
+// not published. Putting the adapters in the same module is therefore what
+// makes the verification runnable at all.
+//
+// The cost of that, stated plainly: the module now names two ecosystem
+// libraries as dependencies. They are used by *this* package only. The shipped
+// library (`moon.pkg` at the module root) and the CLI do not import them, so
+// `csvkit` as a library still depends on nothing outside `moonbitlang/core`
+// plus `moonbitlang/x` for the CLI and the differential test.
+//
+// Scope note: `sikadi123/moonbit-csv` is deliberately absent. It declares
+// `supported_targets = "+js+wasm-gc"`, and a module may target the intersection
+// of its dependencies' supported targets — so depending on it would stop this
+// module from building for `wasm`, which the library itself supports and CI
+// checks. That is a real finding about the ecosystem rather than a limitation
+// of the harness: the trait below is the only thing a candidate must implement,
+// and it can be implemented from any module whose target set permits.
+import {
+  "BenPaoBaMingWangXing/csvkit",
+  "maria/csv_parser" @maria,
+  "CJR-zhang/mbitsv",
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
+}
+
+pkgtype(kind: "executable")

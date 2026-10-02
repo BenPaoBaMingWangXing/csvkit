@@ -35,6 +35,12 @@ CLI_FILE = "cmd/main/main.mbt"
 # Documents that quote these figures. Each entry lists the regexes that are
 # expected to contain one of our derived numbers, so a stale figure is caught
 # rather than silently ignored.
+#
+# The key is a metric name, or a tuple of metric names when a single sentence
+# quotes several figures at once. Keeping the test-case count in here matters
+# as much as the line counts: the count moves every time a test is added, and
+# a document that lags behind by four is exactly the kind of drift this script
+# exists to stop.
 PROSE_CHECKS = [
     (
         "README.md",
@@ -42,6 +48,22 @@ PROSE_CHECKS = [
             # "the corpus (1078 cases, generated)" -- the differential corpus,
             # not the test-case count; derived separately below.
             (r"the corpus \((\d+) cases", "corpus"),
+            (r"Total tests: (\d+), passed", "cases"),
+            (r"five test suites, (\d+) tests", "cases"),
+        ],
+    ),
+    (
+        "SUBMISSION.md",
+        [
+            (r"实现 (\d+) 行 MoonBit（库 (\d+) \+ CLI (\d+)），测试 (\d+) 行，(\d+) 个测试",
+             ("impl_sum", "lib_sum", "cli", "test_sum", "cases")),
+            (r"Total tests: (\d+), passed", "cases"),
+        ],
+    ),
+    (
+        "AGENTS.md",
+        [
+            (r"moon test\s+# (\d+) tests", "cases"),
         ],
     ),
 ]
@@ -123,12 +145,20 @@ def check(m):
             if not hit:
                 bad.append("%s: pattern %r not found" % (name, pat))
                 continue
-            got = int(hit.group(1))
-            if got != m[key]:
+            keys = key if isinstance(key, tuple) else (key,)
+            if len(hit.groups()) != len(keys):
                 bad.append(
-                    "%s: says %s = %d, repository says %d"
-                    % (name, key, got, m[key])
+                    "%s: pattern %r captures %d groups but names %d metrics"
+                    % (name, pat, len(hit.groups()), len(keys))
                 )
+                continue
+            for captured, metric in zip(hit.groups(), keys):
+                got = int(captured)
+                if got != m[metric]:
+                    bad.append(
+                        "%s: says %s = %d, repository says %d"
+                        % (name, metric, got, m[metric])
+                    )
     for line in bad:
         print("MISMATCH  %s" % line, file=sys.stderr)
     if not bad:
