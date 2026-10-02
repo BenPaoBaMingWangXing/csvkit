@@ -12,6 +12,9 @@ See <https://docs.moonbitlang.com> for the language and toolchain.
 - `moon.mod` at the root holds module metadata.
 - Test files end in `_test.mbt` (black-box) or `_wbtest.mbt` (white-box).
 - The library package is the repository root. `cmd/main/` is the CLI.
+- `conformance/` is a separate package of the same module: adapters for other
+  implementations plus a runner. It is the only place that imports a
+  third-party library, which is why it is kept out of the root package.
 - `tools/` holds Python scripts that generate checked-in artefacts.
 - `docs/` holds prose that would bloat the README if inlined.
 
@@ -25,6 +28,28 @@ enforced here.
 **`moon check --deny-warn` must pass.** The codebase is warning-free. When you
 hit a deprecation, fix the call site rather than suppressing the warning. See
 `docs/design.md` §9 for the specific substitutions already applied.
+
+**Believe a green local run only after checking the toolchain version.** CI
+installs the *latest* MoonBit toolchain; a local install drifts behind it. A
+warning introduced by a newer compiler is invisible locally and fatal in CI,
+which is what happened with `implicit_impl_as_method` below. Read
+`moon version --all` in the CI log before concluding that a local pass means
+anything.
+
+**If you `derive(Eq)` or `derive(Debug)` on a type, declare the promotion.**
+Newer toolchains warn that the generated `equal` / `not_equal` / `to_repr` are
+"implicitly promoted as regular methods", and `--deny-warn` makes that fatal.
+Every public type here therefore pairs the derive with an explicit extend:
+
+```moonbit
+} derive(Eq, Debug)
+
+pub extend CsvError with Eq::{not_equal, equal}
+pub extend CsvError with @moonbitlang/core/debug.Debug::{to_repr}
+```
+
+If the type is never compared, prefer not deriving at all — `Verdict` in
+`conformance.mbt` is matched on and carries no derive for that reason.
 
 **Never claim more than you verified.** If a feature is untested, say so or
 leave it out. Documented behaviour must match actual behaviour; the README's
@@ -43,11 +68,13 @@ at tests that do not exist is worse than no matrix.
 ## Workflow
 
 ```bash
+moon version --all                     # check this first; CI uses the latest
 moon check --deny-warn                 # type check, warnings fatal
 moon build --target wasm               # build
 moon test                              # 64 tests
 moon fmt                               # format
 moon info                              # refresh pkg.generated.mbti
+python3 tools/report_size.py --check    # quoted figures match the repository
 ```
 
 Run `moon info && moon fmt` before committing. Inspect the `.mbti` diff: if it
@@ -59,14 +86,20 @@ When a change affects test output snapshots, `moon test --update` refreshes them
 
 ## Testing philosophy
 
-Four suites, each answering a different question:
+Five suites, each answering a different question:
 
 | File | Question |
 |---|---|
 | `conformance_test.mbt` | Does the grammar behave as RFC 4180 specifies? |
 | `conformance_differential_test.mbt` | Does an independent implementation agree? |
+| `conformance_harness_test.mbt` | Does the conformance layer itself report correctly? |
 | `writer_test.mbt` | Does the writer quote exactly when required, and round-trip? |
 | `diagnostics_test.mbt` | Are structural reports correct and well-worded? |
+
+The harness suite exists because the conformance layer makes claims about
+*other* implementations. A verifier that silently mis-classifies a result is
+worse than no verifier, so the `Divergent` / `Rejected` split in particular is
+pinned by a test rather than left to review.
 
 A new behaviour needs a test in the suite that owns the claim. Adding a parser
 feature without a conformance case leaves `docs/conformance.md` unable to cite

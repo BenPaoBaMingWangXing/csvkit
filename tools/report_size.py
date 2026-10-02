@@ -29,8 +29,20 @@ LIBRARY_FILES = [
     "diagnostics.mbt",
     "dialect.mbt",
     "csvkit.mbt",
+    "conformance.mbt",
 ]
 CLI_FILE = "cmd/main/main.mbt"
+
+# The conformance package is counted separately from the library on purpose.
+# It is part of this module but not part of the shipped library: it is an
+# executable package whose whole job is to pull in other implementations, and
+# the root package does not import it. Folding it into the library figure would
+# overstate the library; leaving it out entirely would hide a real third of the
+# project.
+CONFORMANCE_FILES = [
+    "conformance/adapters.mbt",
+    "conformance/main.mbt",
+]
 
 # Documents that quote these figures. Each entry lists the regexes that are
 # expected to contain one of our derived numbers, so a stale figure is caught
@@ -97,13 +109,16 @@ def collect():
     os.chdir(ROOT)
     lib = {f: total_lines(f) for f in LIBRARY_FILES}
     tests = {f: total_lines(f) for f in test_files()}
+    conf = {f: total_lines(f) for f in CONFORMANCE_FILES}
     cli = total_lines(CLI_FILE)
     return {
         "library": lib,
         "tests": tests,
+        "conformance": conf,
         "cli": cli,
         "lib_sum": sum(lib.values()),
         "test_sum": sum(tests.values()),
+        "conf_sum": sum(conf.values()),
         "impl_sum": sum(lib.values()) + cli,
         "cases": sum(count_tests(f) for f in tests),
         "corpus": corpus_size(),
@@ -120,6 +135,10 @@ def report(m):
     print("CLI")
     print("  %-24s %5d" % (os.path.basename(CLI_FILE), m["cli"]))
     print("  %-24s %5d" % ("implementation total", m["impl_sum"]))
+    print("conformance package (not part of the shipped library)")
+    for name, n in m["conformance"].items():
+        print("  %-24s %5d" % (os.path.basename(name), n))
+    print("  %-24s %5d" % ("subtotal", m["conf_sum"]))
     print("tests")
     for name, n in m["tests"].items():
         print("  %-24s %5d" % (name, n))
@@ -128,8 +147,13 @@ def report(m):
     print("test cases: %d" % m["cases"])
     print("corpus cases: %d" % m["corpus"])
     print()
-    print("Tests exceed the implementation. That is deliberate: the")
-    print("correctness claim rests on breadth of evidence, not on brevity.")
+    # This used to read "tests exceed the implementation". That was true of the
+    # parser alone and became false once the conformance layer landed: the tests
+    # are no longer the larger half, and a claim like that should track the
+    # numbers rather than flatter the project. The ratio is what it is.
+    print("test lines vs implementation: %d / %d (%.0f%%)" % (
+        m["test_sum"], m["impl_sum"], 100.0 * m["test_sum"] / m["impl_sum"],
+    ))
 
 
 def check(m):

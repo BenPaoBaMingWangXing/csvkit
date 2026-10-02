@@ -58,6 +58,14 @@ pub(all) struct Divergence {
 
 ///|
 /// How a candidate implementation handled one case.
+///
+/// Deliberately without `derive(Eq)`. Every other public enum in this library
+/// derives `Eq` *and* declares the promotion explicitly, because a bare derive
+/// makes the generated `equal`/`not_equal` implicitly available as methods,
+/// which newer toolchains warn about and `--deny-warn` turns into a failure.
+/// This type needs neither: it is matched on, never compared, so it simply does
+/// not derive. Adding the derive back means adding
+/// `pub extend Verdict with Eq::{not_equal, equal}` beside it.
 pub enum Verdict {
   /// Produced exactly the reference records.
   Conform
@@ -67,7 +75,7 @@ pub enum Verdict {
   /// though it is the "safe-looking" direction: RFC 4180 documents are
   /// unambiguous, so rejecting a legal one loses data.
   Rejected
-} derive(Eq)
+}
 
 ///|
 /// The result of running a whole corpus through one candidate implementation.

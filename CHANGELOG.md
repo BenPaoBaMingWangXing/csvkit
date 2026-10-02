@@ -48,6 +48,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Test count 60 → 64; test-suite line count 959 → 938.
+- `report_size.py` now counts `conformance.mbt` as part of the library, where it
+  belongs — it lives in the root package and is importable as `@csvkit`. The
+  library figure therefore moves from 901 to 1502, and the conformance package
+  is reported separately rather than folded in. The report also stops claiming
+  that tests exceed the implementation: that was true of the parser alone and
+  is no longer true, and the line now prints the actual ratio.
 - CI gains a `conformance` job (asserts this library still conforms, and that
   the published report is current); the generated-files job also checks that
   quoted figures agree with the repository.
